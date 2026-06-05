@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id            String     @id @default(uuid())
+  username      String     @unique
+  password      String
+  role          Role       @default(USER)
+  is_blocked    Boolean    @default(false)
+  created_at    DateTime   @default(now())
+  playlists     Playlist[]
+
+  @@map("users")
+}
+
+model Song {
+  id             String         @id @default(uuid())
+  filename       String
+  title          String
+  artist         String?
+  album          String?
+  year           Int?
+  duration_s     Int?
+  file_path      String         @unique
+  cover_url      String?
+  created_at     DateTime       @default(now())
+  playlist_songs PlaylistSong[]
+
+  @@map("songs")
+}
+
+model Playlist {
+  id          String         @id @default(uuid())
+  user_id     String
+  name        String
+  description String?
+  is_public   Boolean        @default(false)
+  created_at  DateTime       @default(now())
+  user        User           @relation(fields: [user_id], references: [id])
+  songs       PlaylistSong[]
+
+  @@map("playlists")
+}
+
+model PlaylistSong {
+  playlist_id String
+  song_id     String
+  position    Int
+  playlist    Playlist @relation(fields: [playlist_id], references: [id], onDelete: Cascade)
+  song        Song     @relation(fields: [song_id], references: [id])
+
+  @@id([playlist_id, song_id])
+  @@map("playlist_songs")
+}
+
+model TokenBlacklist {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime
+
+  @@map("token_blacklist")
+}
