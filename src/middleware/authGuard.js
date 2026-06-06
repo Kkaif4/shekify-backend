@@ -13,6 +13,7 @@ export async function authGuard(req, res, next) {
   }
 
   if (!token) {
+    console.warn('authGuard: Request blocked. No token found in headers or query parameters.');
     return res.status(401).json({ error: 'Invalid or missing authentication token' });
   }
 
@@ -22,6 +23,7 @@ export async function authGuard(req, res, next) {
       where: { token }
     });
     if (isBlacklisted) {
+      console.warn('authGuard: Request blocked. Token is blacklisted.');
       return res.status(401).json({ error: 'Session has been invalidated. Please log in again.' });
     }
 
@@ -32,16 +34,19 @@ export async function authGuard(req, res, next) {
     });
 
     if (!user) {
+      console.warn(`authGuard: Request blocked. User with ID ${decoded.id} not found in database.`);
       return res.status(401).json({ error: 'User no longer exists' });
     }
 
     if (user.is_blocked) {
+      console.warn(`authGuard: Request blocked. User ${user.username} is blocked.`);
       return res.status(403).json({ error: 'Your account has been blocked' });
     }
 
     req.user = { id: user.id, role: user.role };
     next();
-  } catch {
+  } catch (err) {
+    console.error('authGuard Exception during token validation:', err.message || err);
     return res.status(401).json({ error: 'Invalid or missing authentication token' });
   }
 }

@@ -13,16 +13,19 @@ const router = Router();
  */
 router.get('/:songId', authGuard, async (req, res) => {
   try {
+    console.log(`[STREAM] Incoming request for songId: ${req.params.songId}, Range: ${req.headers.range || 'none'}`);
     const song = await prisma.song.findUnique({
       where: { id: req.params.songId },
       select: { file_path: true },
     });
 
     if (!song) {
+      console.warn(`[STREAM] Error: Song ${req.params.songId} not found in database.`);
       return res.status(404).json({ error: 'Song not found' });
     }
 
     if (!fs.existsSync(song.file_path)) {
+      console.error(`[STREAM] Error: File does not exist on disk: ${song.file_path}`);
       return res.status(404).json({ error: 'Audio file not found on disk' });
     }
 

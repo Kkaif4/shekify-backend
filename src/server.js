@@ -25,15 +25,16 @@ app.use(morgan("dev"));
 
 app.use(
   cors({
-    origin: "*",
+    origin: true,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
       "Authorization",
       "X-Requested-With",
       "Accept",
       "Range",
+      "ngrok-skip-browser-warning",
     ],
     exposedHeaders: ["Content-Range", "Accept-Ranges", "Content-Length"],
   }),

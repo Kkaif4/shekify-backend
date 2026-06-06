@@ -2,6 +2,7 @@ import { Router } from "express";
 import NodeID3 from "node-id3";
 import prisma from "../db/connection.js";
 import { authGuard } from "../middleware/authGuard.js";
+import { getOrCompute } from "../db/redis.js";
 
 const router = Router();
 
@@ -13,39 +14,50 @@ router.get("/", authGuard, async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    let whereClause = {};
+    const cacheKey = `search:songs:${search ? encodeURIComponent(search.trim()) : "all"}:${page}:${limit}`;
 
-    if (search && search.trim()) {
-      const term = search.trim();
-      whereClause = {
-        OR: [
-          { title: { contains: term, mode: "insensitive" } },
-          { artist: { contains: term, mode: "insensitive" } },
-          { album: { contains: term, mode: "insensitive" } },
-        ],
-      };
-    }
+    const cachedData = await getOrCompute(cacheKey, async () => {
+      let whereClause = {};
 
-    const [songs, total] = await Promise.all([
-      prisma.song.findMany({
-        where: whereClause,
-        skip,
-        take: limit,
-        select: {
-          id: true,
-          title: true,
-          artist: true,
-          album: true,
-          year: true,
-          duration_s: true,
-          created_at: true,
-        },
-        orderBy: { created_at: "desc" },
-      }),
-      prisma.song.count({ where: whereClause })
-    ]);
+      if (search && search.trim()) {
+        const term = search.trim();
+        whereClause = {
+          OR: [
+            { title: { contains: term, mode: "insensitive" } },
+            { artist: { contains: term, mode: "insensitive" } },
+            { album: { contains: term, mode: "insensitive" } },
+          ],
+        };
+      }
 
-    return res.status(200).json({ data: songs, total, page, totalPages: Math.ceil(total / limit) });
+      const [songs, total] = await Promise.all([
+        prisma.song.findMany({
+          where: whereClause,
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            title: true,
+            artist: true,
+            album: true,
+            year: true,
+            duration_s: true,
+            created_at: true,
+          },
+          orderBy: { created_at: "desc" },
+        }),
+        prisma.song.count({ where: whereClause })
+      ]);
+
+      return { songs, total };
+    }, 3600 * 24); // Cache songs list for 24 hours
+
+    return res.status(200).json({
+      data: cachedData.songs,
+      total: cachedData.total,
+      page,
+      totalPages: Math.ceil(cachedData.total / limit)
+    });
   } catch (err) {
     console.error("Song search error:", err);
     return res.status(500).json({ error: "Internal server error" });

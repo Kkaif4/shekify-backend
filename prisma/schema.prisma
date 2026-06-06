@@ -37,6 +37,8 @@ model Song {
   created_at     DateTime       @default(now())
   playlist_songs PlaylistSong[]
 
+  @@index([title])
+  @@index([artist])
   @@map("songs")
 }
 
@@ -61,6 +63,7 @@ model PlaylistSong {
   song        Song     @relation(fields: [song_id], references: [id])
 
   @@id([playlist_id, song_id])
+  @@index([playlist_id, position])
   @@map("playlist_songs")
 }
 
