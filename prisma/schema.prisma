@@ -74,3 +74,31 @@ model TokenBlacklist {
 
   @@map("token_blacklist")
 }
+
+model IdempotencyKey {
+  id              String   @id @default(uuid())
+  idempotency_key String   @unique
+  user_id         String
+  endpoint        String
+  method          String
+  response_status Int?
+  response_body   Json?
+  created_at      DateTime @default(now())
+  expires_at      DateTime
+
+  @@index([idempotency_key])
+  @@index([user_id, endpoint])
+  @@index([expires_at])
+  @@map("idempotency_keys")
+}
+
+model PlaybackHistory {
+  id         String   @id @default(uuid())
+  user_id    String
+  song_id    String
+  played_at  DateTime @default(now())
+
+  @@index([user_id])
+  @@index([song_id])
+  @@map("playback_history")
+}

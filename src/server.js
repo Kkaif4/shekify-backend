@@ -35,11 +35,18 @@ app.use(
       "Accept",
       "Range",
       "ngrok-skip-browser-warning",
+      "X-Pinggy-No-Screen",
+      "Idempotency-Key",
     ],
     exposedHeaders: ["Content-Range", "Accept-Ranges", "Content-Length"],
   }),
 );
 app.use(express.json());
+
+import playbackRoutes from "./routes/playback.routes.js";
+import { idempotencyMiddleware } from "./middleware/idempotency.js";
+
+app.use(idempotencyMiddleware);
 
 // ── Route mounting ───────────────────────────────────────────
 app.use("/api/auth", authRoutes);
@@ -48,6 +55,7 @@ app.use("/api/songs", songsRoutes);
 app.use("/api/stream", streamRoutes);
 app.use("/api/download", downloadRoutes);
 app.use("/api/playlists", playlistsRoutes);
+app.use("/api/playback", playbackRoutes);
 
 // ── Health check ─────────────────────────────────────────────
 app.get("/api/health", (_req, res) => {
